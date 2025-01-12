@@ -1,0 +1,43 @@
+#maze-container {
+    background-color: #8cc48c;
+    border: 2px solid #28a745;
+
+    width: 600px; 
+    height: 600px; 
+    margin: auto; 
+    position: static; 
+    top: 100%; 
+    left: 50%; 
+    padding-top: 1%;
+}
+
+
+
+
+/* Otros estilos */
+button {
+    font-size: 1rem;
+}
+
+#timer {
+    font-family: 'Courier New', Courier, monospace;
+    color: rgb(61, 13, 194);
+    font-size: 3rem;
+}
+
+.timer-block {
+    margin-left: auto;
+    width: 15%;
+    background-color: #a3a8a4;
+    border-radius: 5%;
+}
+
+.main-title {
+    margin: 2%;
+    color: #28a745;
+}
+
+h1, h3 {
+    color: #28a745;
+}
+
