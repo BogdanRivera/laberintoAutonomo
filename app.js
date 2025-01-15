@@ -330,9 +330,9 @@ function resolverLaberinto() {
     } else if (algoritmo === "tmx") {
         resolverBtn.disabled = true; // Deshabilitar el botón de resolver
         resolverTremaux();
-    } else if (algoritmo === "bfs") {
+    } else if (algoritmo === "manoDerecha") {
         resolverBtn.disabled = true; // Deshabilitar el botón de resolver
-        resolverBFS();
+        resolverManoDerecha();
     }
 }
 
@@ -430,47 +430,100 @@ async function resolverTremaux() {
     alert("No se encontró solución.");
 }
 
-async function resolverBFS() {
-    let queue = [[casillas[0]]]; // Cola que almacena rutas completas (no solo nodos)
-    let visited = new Set(); // Conjunto para nodos visitados
-    visited.add(casillas[0]); // Marca el nodo inicial como visitado
+async function resolverManoDerecha() {
+    let actual = casillas[0]; // Comienza desde la casilla inicial
+    let orientacion = 0; // Dirección inicial: 0 = Norte, 1 = Este, 2 = Sur, 3 = Oeste
+    let final = casillas[casillas.length - 1]; // Casilla objetivo
+    ruta = [actual]; // Registra la ruta tomada
 
-    while (queue.length > 0) {
+    while (actual !== final) {
         if (enPausa) {
-            await pausa(); // Espera mientras está en pausa
+            await pausa(); // Espera si está en pausa
             continue;
         }
-        let rutaActual = queue.shift(); // Extrae la primera ruta de la cola
-        let actual = rutaActual[rutaActual.length - 1]; // Obtiene el último nodo de la ruta
 
-        // Dibuja la ruta actual en el laberinto
-        await recorrerRuta(rutaActual);
+        // Encuentra la siguiente casilla basada en la orientación y las paredes
+        let siguiente = encontrarSiguienteManoDerecha(actual, orientacion);
 
-        // Verifica si se alcanzó la meta
-        if (actual === casillas[casillas.length - 1]) {
-            pausarTimer(); // Pausa el temporizador al finalizar
-            alert("¡El laberinto ha sido resuelto!");
-            generarBtn.disabled = false; // Habilita el botón de generar
-            return;
+        if (siguiente) {
+            // Actualiza orientación basada en el movimiento realizado
+            orientacion = actualizarOrientacion(actual, siguiente, orientacion);
+            actual = siguiente;
+            ruta.push(actual);
+
+            // Dibuja al agente avanzando
+            await dibujarAgente(actual);
+
+            // Marca la casilla como visitada
+            actual.visitada = true;
+        } else {
+            // Si no hay movimientos válidos, rompe el bucle
+            break;
         }
-
-        // Obtiene vecinos válidos
-        let vecinos = obtenerVecinos(actual);
-
-        for (let vecino of vecinos) {
-            if (!visited.has(vecino)) {
-                visited.add(vecino); // Marca el vecino como visitado
-                let nuevaRuta = [...rutaActual, vecino]; // Crea una nueva ruta extendida
-                queue.push(nuevaRuta); // Agrega la nueva ruta a la cola
-            }
-        }
-
-        // Retrocede al inicio de la ruta actual antes de explorar la siguiente
-        await regresarAlInicio(rutaActual);
     }
 
-    alert("No se encontró solución.");
+    if (actual === final) {
+        pausarTimer(); // Pausa el temporizador al finalizar
+        alert("¡El laberinto ha sido resuelto!");
+        generarBtn.disabled = false; // Habilita el botón de generar
+    } else {
+        alert("No se encontró solución.");
+    }
 }
+
+// Encuentra la siguiente casilla basada en la mano derecha
+function encontrarSiguienteManoDerecha(actual, orientacion) {
+    // Prioridad de direcciones: Derecha, Frente, Izquierda, Atrás
+    let prioridades = [
+        (orientacion + 1) % 4, // Derecha
+        orientacion,           // Frente
+        (orientacion + 3) % 4, // Izquierda
+        (orientacion + 2) % 4  // Atrás
+    ];
+
+    for (let direccion of prioridades) {
+        let vecino = obtenerVecinoEnDireccion(actual, direccion);
+        if (vecino && !hayPared(actual, vecino, direccion)) {
+            return vecino; // Devuelve el vecino accesible
+        }
+    }
+
+    return null; // No hay movimientos posibles
+}
+
+// Obtiene el vecino en la dirección especificada
+function obtenerVecinoEnDireccion(casilla, direccion) {
+    let x = casilla.x;
+    let y = casilla.y;
+
+    switch (direccion) {
+        case 0: return casillas[indice(x, y - 1)]; // Norte
+        case 1: return casillas[indice(x + 1, y)]; // Este
+        case 2: return casillas[indice(x, y + 1)]; // Sur
+        case 3: return casillas[indice(x - 1, y)]; // Oeste
+        default: return null;
+    }
+}
+
+// Verifica si hay una pared en la dirección especificada
+function hayPared(actual, vecino, direccion) {
+    if (!vecino) return true; // Si no hay vecino, considera que hay una pared
+    return actual.walls[direccion];
+}
+
+// Actualiza la orientación basada en el movimiento realizado
+function actualizarOrientacion(actual, siguiente, orientacion) {
+    let dx = siguiente.x - actual.x;
+    let dy = siguiente.y - actual.y;
+
+    if (dx === 1) return 1; // Este
+    if (dx === -1) return 3; // Oeste
+    if (dy === 1) return 2; // Sur
+    if (dy === -1) return 0; // Norte
+
+    return orientacion; // Sin cambio
+}
+
 
 // Dibuja al agente recorriendo una ruta
 async function recorrerRuta(ruta) {
